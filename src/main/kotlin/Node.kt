@@ -1,0 +1,1 @@
+data class Node(val elementOfField: Int, var aim_x: Int = 0, var aim_y: Int = 0)

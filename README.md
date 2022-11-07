@@ -5,4 +5,4 @@
 ### Эвристическая оценка<br/>
 * Сумма растояний ячеек до их целевых позиций
 ### Пример работы алгоритма
-![result_1](file:///D:/IntellijIDEAProjects/HomeTask/Result/Result_1.png)
+![result_1](https://github.com/SolarMeIster/HomeTask/blob/master/Result/Result_1.png)

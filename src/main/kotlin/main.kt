@@ -1,96 +1,135 @@
 import kotlin.math.abs
-import kotlin.math.min
 import kotlin.random.Random
 
 typealias Matrix = Array<IntArray> // синоним для понятного чтения кода
 
-var step = 0
+val nodesList = mutableListOf<Node>()
 
-/**
- * Игра в восемь
- *
- * Предполагается, что мы будем управлять ячейкой 0
- * В данном случае ячейка 0 - это пустая клетка
- *
- *
- * */
+
 fun main() {
-    val aimField = arrayOf(intArrayOf(0, 1, 2), intArrayOf(3, 4, 5), intArrayOf(6, 7, 8))
-    var field = arrayOf<IntArray>()
-    field = createRandomMatrix(field)
-    var triple: Triple<Matrix, MutableList<Node>, Node>? = null
-    // создаем массивы для хранения координат целевого состояния и текщего состояния
-    var pair = dataOfDistance(aimField)
-    val dataOfAimNodes = pair.first.toList()
-    pair = dataOfDistance(field)
-    var dataOfCurrentNodes = pair.first
+    val aimField = arrayOf(intArrayOf(1, 2, 3), intArrayOf(4, 5, 6), intArrayOf(7, 8, 0))
 
-    var mainHero = pair.second // ячейка 0
+    // исходное состояние: пример
+    val field = arrayOf(intArrayOf(0, 3, 2), intArrayOf(8, 1, 5), intArrayOf(6, 4, 7))
+    //field = createRandomMatrix(field)
+    // создаем массивы для хранения координат целевого состояния
+    val dataOfAimNodes = dataOfField(aimField).second.toList()
 
-    println(dataOfCurrentNodes)
-    println(dataOfAimNodes)
-    println(sumDistance(dataOfCurrentNodes, dataOfAimNodes))
-
+    println("Original field")
     printMatrix(field)
-    println(selectionOfMove(field, dataOfAimNodes, mainHero))
- //while (i++ < 6) {
-     /*if (mainHero.aim_y < 2) mainHero = right(currentField, mainHero).second
 
-     printMatrix(currentField)
-
-     if (mainHero.aim_y > 0) mainHero = left(currentField, mainHero).second
-
-     printMatrix(currentField)
-
-     if (mainHero.aim_x < 2) mainHero = bottom(currentField, mainHero).second
-
-     printMatrix(currentField)
-
-     if (mainHero.aim_x > 0) mainHero = top(currentField, mainHero).second
-
-     printMatrix(currentField)*/
-
- //}
+    nodesList.add(Node(field))
 
     // алгоритм для поиска оптимального решения
-    /*while (true) {
-        when (selectionOfMove(currentField, dataOfCurrentNodes, dataOfAimNodes, mainHero)) {
-            Movement.RIGHT -> {
-                triple = right(currentField, mainHero)
-                currentField = triple.first
-                dataOfCurrentNodes = triple.second
-                mainHero = triple.third
+    while (true) {
+        var index = minDistance()
+        if (isEqual(index, aimField)) {
+            // вывод шагов на экран
+            val resultList = mutableListOf<Node>()
+            resultList.add(nodesList[index])
+            index = nodesList[index].indexOfField
+            while (index != 0) {
+                resultList.add(nodesList[index])
+                index = nodesList[index].indexOfField
             }
-            Movement.LEFT -> {
-                triple = left(currentField, mainHero)
-                currentField = triple.first
-                dataOfCurrentNodes = triple.second
-                mainHero = triple.third
-            }
-            Movement.TOP -> {
-                triple = top(currentField, mainHero)
-                currentField = triple.first
-                dataOfCurrentNodes = triple.second
-                mainHero = triple.third
-            }
-            Movement.BOTTOM -> {
-                triple = bottom(currentField, mainHero)
-                currentField = triple.first
-                dataOfCurrentNodes = triple.second
-                mainHero = triple.third
-            }
-            else -> println("Нет решения!")
-        }
-
-        printMatrix(currentField)
-
-        if (dataOfCurrentNodes == dataOfAimNodes) {
+            resultList.reverse()
+            for (node in resultList)
+                printMatrix(node.field)
             break
+        } else
+            selectionOfMove(index, dataOfAimNodes)
+    }
+}
+
+/** Выбор куда пойдёт 0 */
+fun selectionOfMove(
+    index: Int,
+    dataOfAimNodes: List<Element>,
+) {
+    val mainHero = dataOfField(nodesList[index].field).first // ячейка 0
+
+    val nodeMoveRight = Node(arrayOf())
+    if (mainHero.aim_y < 2) {
+        // right
+        with(nodeMoveRight) {
+            field = right(nodesList[index].field.copy(), mainHero)
+            if (isExpandable(field)) {
+                indexOfField = index
+                distance = sumDistance(field, dataOfAimNodes)
+                step = nodesList[index].step + 1
+                nodesList.add(this)
+            }
         }
-    }*/
+    }
 
-    printMatrix(aimField)
+    val nodeMoveLeft = Node(arrayOf())
+    if (mainHero.aim_y > 0) {
+        // left
+        with(nodeMoveLeft) {
+            field = left(nodesList[index].field.copy(), mainHero)
+            if (isExpandable(field)) {
+                indexOfField = index
+                distance = sumDistance(field, dataOfAimNodes)
+                step = nodesList[index].step + 1
+                nodesList.add(this)
+            }
+        }
+    }
 
+    val nodeMoveBottom = Node(arrayOf())
+    if (mainHero.aim_x < 2) {
+        // bottom
+        with(nodeMoveBottom) {
+            field = bottom(nodesList[index].field.copy(), mainHero)
+            if (isExpandable(field)) {
+                indexOfField = index
+                distance = sumDistance(field, dataOfAimNodes)
+                step = nodesList[index].step + 1
+                nodesList.add(this)
+            }
+        }
+    }
+
+    val nodeMoveTop = Node(arrayOf())
+    if (mainHero.aim_x > 0) {
+        // top
+        with(nodeMoveTop) {
+            field = top(nodesList[index].field.copy(), mainHero)
+            if (isExpandable(field)) {
+                indexOfField = index
+                distance = sumDistance(field, dataOfAimNodes)
+                step = nodesList[index].step + 1
+                nodesList.add(this)
+            }
+        }
+    }
+
+    nodesList[index].distance = 10000
+}
+
+/** Выбирает по наименьшему f, с какого места ему двигаться дальше */
+fun minDistance(): Int {
+    var f = 10000
+    var index = 0
+    for (i in nodesList.indices) {
+        if (nodesList[i].distance == f) {
+            continue
+        } else if ((nodesList[i].distance + nodesList[i].step) < f) {
+            index = i
+            f = nodesList[i].distance + nodesList[i].step
+        }
+    }
+    return index
+
+}
+
+/** Проверка того, что 0 не пойдёт обратно */
+fun isExpandable(field: Matrix): Boolean {
+    for (i in nodesList.indices) {
+        if (isEqual(i, field))
+            return false
+    }
+    return true
 }
 
 /** Вывод массива на экран */
@@ -104,79 +143,25 @@ fun printMatrix(field: Matrix) {
     println()
 }
 
-/** Выбор куда пойдёт 0 */
-fun selectionOfMove(
-    field: Matrix,
-    dataOfAimNodes: List<Node>,
-    mainHero: Node
-): Movement {
-    var f = 10000
-    var currentField: Matrix = field
-    var dataOfCurNodes: MutableList<Node>
-    var result: Int
-    var movement = Movement.EMPTY
-    var currF: Int
-    step++
-    if (mainHero.aim_y < 2) {
-        // поворот направо
-        currentField = right(currentField, mainHero).first
-        dataOfCurNodes = dataOfDistance(currentField).first
-        result = sumDistance(dataOfCurNodes, dataOfAimNodes)
-        currF = result + step
-        println("Right $result\n")
-        printMatrix(currentField)
-        println()
-        if (currF < f)  movement = Movement.RIGHT
-        f = min(f, currF)
+/** Сравнивает, совпадает ли узел с узлом, на который указывает index */
+fun isEqual(index: Int, field: Matrix):Boolean {
+    for (row in field) {
+        for (element in row)
+            if (nodesList[index].field[field.indexOf(row)][row.indexOf(element)] != element)
+                return false
     }
-    currentField = field
-    if (mainHero.aim_y > 0) {
-        // поворот налево
-        currentField = left(currentField, mainHero).first
-        dataOfCurNodes = dataOfDistance(currentField).first
-        result = sumDistance(dataOfCurNodes, dataOfAimNodes)
-        currF = result + step
-        println("Left $result\n")
-        printMatrix(currentField)
-        println()
-        if (currF < f) movement = Movement.LEFT
-        f = min(f, currF)
-    }
-    currentField = field
-    if (mainHero.aim_x < 2) {
-        // поворот вниз
-        currentField = bottom(currentField, mainHero).first
-        dataOfCurNodes = dataOfDistance(currentField).first
-        result = sumDistance(dataOfCurNodes, dataOfAimNodes)
-        currF = result + step
-        println("Bottom $result\n")
-        printMatrix(currentField)
-        println()
-        if (currF < f) movement = Movement.BOTTOM
-        f = min(f, currF)
-    }
-    currentField = field
-    if (mainHero.aim_x > 0) {
-        //поворот вверх
-        currentField = top(currentField, mainHero).first
-        dataOfCurNodes = dataOfDistance(currentField).first
-        result = sumDistance(dataOfCurNodes, dataOfAimNodes)
-        currF = result + step
-        println("Top $result\n")
-        printMatrix(currentField)
-        println()
-        if (currF < f) movement = Movement.TOP
-    }
-    return movement
+    return true
 }
 
+/** Функция расширение для копирования двумерного массива */
+fun Array<IntArray>.copy() = Array(size) { get(it).clone() }
+
 /** Меняет местами ячейку 0 с другой ячейкой */
-fun swap(mainHero: Node, civilian_x: Int, civilian_y: Int, field: Matrix): Pair<Matrix, Node> {
+fun swap(mainHero: Element, civilian_x: Int, civilian_y: Int, field: Matrix): Matrix {
     val c = field[mainHero.aim_x][mainHero.aim_y]
     field[mainHero.aim_x][mainHero.aim_y] = field[civilian_x][civilian_y]
     field[civilian_x][civilian_y] = c
-    val mainHeroNew = Node(mainHero.elementOfField, civilian_x, civilian_y)
-    return Pair(field, mainHeroNew)
+    return field
 }
 
 /** Заполняем двумерный массив */
@@ -226,48 +211,51 @@ fun shuffleMatrix(field: Matrix): Matrix {
     return shuffleField.toTypedArray()
 }
 
-/** Создает список координат всех элементов на текущий момент */
-fun dataOfDistance(field: Matrix): Pair<MutableList<Node>, Node> {
-    val data = mutableListOf<Node>()
-    lateinit var mainHero: Node
-    for (row in field)
-        for (element in row)
+/** Находит текущую позицию 0 */
+fun dataOfField(field: Matrix): Pair<Element, MutableList<Element>> {
+    val data = mutableListOf<Element>()
+    lateinit var mainHero: Element
+    for (row in field) {
+        for (element in row) {
             if (element != 0) {
-                data += Node(element, field.indexOf(row), row.indexOf(element))
+                data += Element(element, field.indexOf(row), row.indexOf(element))
             } else {
                 mainHero =
-                    Node(element, field.indexOf(row), row.indexOf(element))
+                    Element(element, field.indexOf(row), row.indexOf(element))
             }
-    return Pair(data, mainHero)
+        }
+    }
+    return Pair(mainHero, data)
 }
 
 /** Суммарное расстояние до целевых позиций */
-fun sumDistance(dataOfCurrentNodes: MutableList<Node>, dataOfAimNodes: List<Node>): Int {
+fun sumDistance(field: Matrix, dataOfAimNodes: List<Element>): Int {
+    val data = dataOfField(field.copy()).second
     var sum = 0
     for (aimNode in dataOfAimNodes)
-        for (currentNode in dataOfCurrentNodes)
+        for (currentNode in data)
             if (aimNode.elementOfField == currentNode.elementOfField)
                 sum += abs(aimNode.aim_x - currentNode.aim_x) + abs(aimNode.aim_y - currentNode.aim_y)
     return sum
 }
 
 /** Поворот направо */
-fun right(field: Matrix, mainHero: Node): Pair<Matrix, Node> {
+fun right(field: Matrix, mainHero: Element): Matrix {
     return swap(mainHero, mainHero.aim_x, mainHero.aim_y + 1, field)
 }
 
 /** Поворот налево */
-fun left(field: Matrix, mainHero: Node): Pair<Matrix, Node> {
+fun left(field: Matrix, mainHero: Element): Matrix {
     return swap(mainHero, mainHero.aim_x, mainHero.aim_y - 1, field)
 }
 
 /** Подъем */
-fun top(field: Matrix, mainHero: Node): Pair<Matrix, Node> {
+fun top(field: Matrix, mainHero: Element): Matrix {
     return swap(mainHero, mainHero.aim_x - 1, mainHero.aim_y, field)
 }
 
 /** Спуск */
-fun bottom(field: Matrix, mainHero: Node): Pair<Matrix, Node> {
+fun bottom(field: Matrix, mainHero: Element): Matrix {
     return swap(mainHero, mainHero.aim_x + 1, mainHero.aim_y, field)
 }
 
